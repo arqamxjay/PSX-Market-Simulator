@@ -1,20 +1,25 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include <cstdlib> // For random numbers
-#include <ctime>   // For time
-#include <iomanip> // For currency formatting
+#include <cstdlib>
+#include <ctime>
+#include <iomanip>
 
 using namespace std;
 
-// 1. Define the Structure of a Stock
 struct Stock {
     string symbol;
     string name;
     double price;
 };
 
-// Helper function to display market status
+// NEW: Structure to track what you own
+struct Holding {
+    string symbol;
+    int quantity;
+    double avgCost;
+};
+
 void showMarket(const vector<Stock>& market) {
     cout << "\n--- 📈 PSX LIVE MARKET STATUS ---" << endl;
     cout << left << setw(10) << "SYMBOL" << setw(20) << "NAME" << "PRICE (PKR)" << endl;
@@ -25,14 +30,31 @@ void showMarket(const vector<Stock>& market) {
     cout << "---------------------------------------------" << endl;
 }
 
+// NEW: Function to show your portfolio
+void showPortfolio(const vector<Holding>& myStocks, double balance) {
+    cout << "\n--- 💼 MY PORTFOLIO ---" << endl;
+    cout << "Cash Balance: PKR " << fixed << setprecision(2) << balance << endl;
+    
+    if (myStocks.empty()) {
+        cout << "(You don't own any stocks yet)" << endl;
+    } else {
+        cout << "---------------------------------------------" << endl;
+        cout << left << setw(10) << "SYMBOL" << setw(10) << "QTY" << "AVG COST" << endl;
+        cout << "---------------------------------------------" << endl;
+        for (const auto& h : myStocks) {
+            cout << left << setw(10) << h.symbol << setw(10) << h.quantity << fixed << setprecision(2) << h.avgCost << endl;
+        }
+    }
+    cout << "---------------------------------------------" << endl;
+}
+
 int main() {
-    // Seed random number generator
     srand(time(0));
+    double userBalance = 100000.00;
+    
+    // NEW: Vector to store owned stocks
+    vector<Holding> myPortfolio;
 
-    // Initialize User
-    double userBalance = 100000.00; // 1 Lakh PKR Start
-
-    // Initialize Market Data (Dummy PSX Data)
     vector<Stock> market = {
         {"OGDC", "Oil & Gas Dev", 118.50},
         {"TRG", "TRG Pakistan", 88.25},
@@ -43,44 +65,58 @@ int main() {
     bool isRunning = true;
     int choice;
 
-    cout << "Welcome to Quantum Park's PSX Simulator!" << endl;
+    cout << "Welcome to Quantum Park's PSX Simulator (v2.0)!" << endl;
 
     while (isRunning) {
-        cout << "\n💰 Your Balance: PKR " << fixed << setprecision(2) << userBalance << endl;
-        cout << "1. View Market" << endl;
-        cout << "2. Buy Stock (Simulation)" << endl;
-        cout << "3. Exit" << endl;
+        cout << "\n1. View Market" << endl;
+        cout << "2. Buy Stock" << endl;
+        cout << "3. View Portfolio (NEW)" << endl;
+        cout << "4. Exit" << endl;
         cout << "Enter choice: ";
         cin >> choice;
 
         if (choice == 1) {
-            // Fluctuate prices slightly before showing to simulate "Live Market"
             for (auto& s : market) {
-                double change = (rand() % 10 - 5); // Random shift between -5 and +5
+                double change = (rand() % 10 - 5);
                 s.price += change;
-                if (s.price < 0) s.price = 1.0; // Prevent negative stock prices
+                if (s.price < 1.0) s.price = 1.0;
             }
             showMarket(market);
         }
         else if (choice == 2) {
-            // Simple Buy Logic
             string symbol;
             int qty;
-            cout << "Enter Symbol (e.g., TRG): ";
+            cout << "Enter Symbol: ";
             cin >> symbol;
             cout << "Enter Quantity: ";
             cin >> qty;
 
-            // Find stock (Simple search)
             bool found = false;
             for (auto& s : market) {
                 if (s.symbol == symbol) {
                     double cost = s.price * qty;
                     if (userBalance >= cost) {
                         userBalance -= cost;
-                        cout << "✅ Successfully bought " << qty << " shares of " << s.name << "!" << endl;
+                        
+                        // NEW: Add to portfolio logic
+                        bool alreadyOwned = false;
+                        for(auto& h : myPortfolio) {
+                            if(h.symbol == symbol) {
+                                // Update average cost
+                                double totalValue = (h.quantity * h.avgCost) + cost;
+                                h.quantity += qty;
+                                h.avgCost = totalValue / h.quantity;
+                                alreadyOwned = true;
+                                break;
+                            }
+                        }
+                        if(!alreadyOwned) {
+                            myPortfolio.push_back({symbol, qty, s.price});
+                        }
+
+                        cout << "✅ Bought " << qty << " shares of " << s.name << "!" << endl;
                     } else {
-                        cout << "❌ Insufficient Funds! You need " << cost << " PKR." << endl;
+                        cout << "❌ Insufficient Funds!" << endl;
                     }
                     found = true;
                     break;
@@ -89,12 +125,14 @@ int main() {
             if (!found) cout << "❌ Symbol not found!" << endl;
         }
         else if (choice == 3) {
+            showPortfolio(myPortfolio, userBalance);
+        }
+        else if (choice == 4) {
             isRunning = false;
-            cout << "Exiting Simulator. Goodbye!" << endl;
+            cout << "Exiting. Good luck with the market!" << endl;
         } else {
             cout << "Invalid Option." << endl;
         }
     }
-
     return 0;
 }
