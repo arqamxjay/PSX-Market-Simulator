@@ -13,7 +13,6 @@ struct Stock {
     double price;
 };
 
-// NEW: Structure to track what you own
 struct Holding {
     string symbol;
     int quantity;
@@ -30,13 +29,12 @@ void showMarket(const vector<Stock>& market) {
     cout << "---------------------------------------------" << endl;
 }
 
-// NEW: Function to show your portfolio
 void showPortfolio(const vector<Holding>& myStocks, double balance) {
     cout << "\n--- 💼 MY PORTFOLIO ---" << endl;
     cout << "Cash Balance: PKR " << fixed << setprecision(2) << balance << endl;
     
     if (myStocks.empty()) {
-        cout << "(You don't own any stocks yet)" << endl;
+        cout << "(You don't own any stocks)" << endl;
     } else {
         cout << "---------------------------------------------" << endl;
         cout << left << setw(10) << "SYMBOL" << setw(10) << "QTY" << "AVG COST" << endl;
@@ -48,11 +46,17 @@ void showPortfolio(const vector<Holding>& myStocks, double balance) {
     cout << "---------------------------------------------" << endl;
 }
 
+// Helper to find current market price of a stock
+double getMarketPrice(const vector<Stock>& market, string symbol) {
+    for(const auto& s : market) {
+        if(s.symbol == symbol) return s.price;
+    }
+    return 0.0;
+}
+
 int main() {
     srand(time(0));
     double userBalance = 100000.00;
-    
-    // NEW: Vector to store owned stocks
     vector<Holding> myPortfolio;
 
     vector<Stock> market = {
@@ -65,17 +69,19 @@ int main() {
     bool isRunning = true;
     int choice;
 
-    cout << "Welcome to Quantum Park's PSX Simulator (v2.0)!" << endl;
+    cout << "Welcome to Quantum Park's PSX Simulator (v3.0)!" << endl;
 
     while (isRunning) {
         cout << "\n1. View Market" << endl;
         cout << "2. Buy Stock" << endl;
-        cout << "3. View Portfolio (NEW)" << endl;
-        cout << "4. Exit" << endl;
+        cout << "3. Sell Stock (NEW)" << endl;
+        cout << "4. View Portfolio" << endl;
+        cout << "5. Exit" << endl;
         cout << "Enter choice: ";
         cin >> choice;
 
         if (choice == 1) {
+            // Market fluctuation
             for (auto& s : market) {
                 double change = (rand() % 10 - 5);
                 s.price += change;
@@ -84,6 +90,7 @@ int main() {
             showMarket(market);
         }
         else if (choice == 2) {
+            // BUY LOGIC
             string symbol;
             int qty;
             cout << "Enter Symbol: ";
@@ -98,11 +105,10 @@ int main() {
                     if (userBalance >= cost) {
                         userBalance -= cost;
                         
-                        // NEW: Add to portfolio logic
+                        // Add to portfolio
                         bool alreadyOwned = false;
                         for(auto& h : myPortfolio) {
                             if(h.symbol == symbol) {
-                                // Update average cost
                                 double totalValue = (h.quantity * h.avgCost) + cost;
                                 h.quantity += qty;
                                 h.avgCost = totalValue / h.quantity;
@@ -113,7 +119,6 @@ int main() {
                         if(!alreadyOwned) {
                             myPortfolio.push_back({symbol, qty, s.price});
                         }
-
                         cout << "✅ Bought " << qty << " shares of " << s.name << "!" << endl;
                     } else {
                         cout << "❌ Insufficient Funds!" << endl;
@@ -125,11 +130,51 @@ int main() {
             if (!found) cout << "❌ Symbol not found!" << endl;
         }
         else if (choice == 3) {
-            showPortfolio(myPortfolio, userBalance);
+            // SELL LOGIC
+            string symbol;
+            int qty;
+            cout << "Enter Symbol to Sell: ";
+            cin >> symbol;
+
+            // Check if user owns it
+            int index = -1;
+            for(int i=0; i<myPortfolio.size(); i++) {
+                if(myPortfolio[i].symbol == symbol) {
+                    index = i;
+                    break;
+                }
+            }
+
+            if(index != -1) {
+                cout << "You own " << myPortfolio[index].quantity << " shares. Enter Qty to Sell: ";
+                cin >> qty;
+
+                if(qty <= myPortfolio[index].quantity) {
+                    double currentPrice = getMarketPrice(market, symbol);
+                    double revenue = currentPrice * qty;
+                    
+                    userBalance += revenue;
+                    myPortfolio[index].quantity -= qty;
+                    
+                    cout << "✅ Sold " << qty << " shares for " << revenue << " PKR!" << endl;
+
+                    // Remove from list if 0 left
+                    if(myPortfolio[index].quantity == 0) {
+                        myPortfolio.erase(myPortfolio.begin() + index);
+                    }
+                } else {
+                    cout << "❌ You don't have that many shares!" << endl;
+                }
+            } else {
+                cout << "❌ You don't own this stock!" << endl;
+            }
         }
         else if (choice == 4) {
+            showPortfolio(myPortfolio, userBalance);
+        }
+        else if (choice == 5) {
             isRunning = false;
-            cout << "Exiting. Good luck with the market!" << endl;
+            cout << "Exiting. Happy Trading!" << endl;
         } else {
             cout << "Invalid Option." << endl;
         }
